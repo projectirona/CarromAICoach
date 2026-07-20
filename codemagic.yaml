@@ -1,0 +1,27 @@
+workflows:
+  ios-swift-app:
+    name: Carrom AI Coach iOS Build
+    max_build_duration: 120
+    instance_type: mac_mini_m1
+    environment:
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Build Swift Package
+        script: |
+          # The codebase is structured as a Swift Package Manager (SPM) library.
+          # We run swift build to verify the target compiles successfully.
+          swift build -v
+      - name: Archive and Build iOS App
+        script: |
+          # Checks package targets and compiles
+          xcodebuild build -scheme CarromAICoach -destination 'generic/platform=iOS'
+    artifacts:
+      - .build/debug/*.a
+      - .build/release/*.a
