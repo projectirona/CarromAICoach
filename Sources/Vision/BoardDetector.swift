@@ -1,6 +1,6 @@
 import Foundation
 import UIKit
-import Vision
+@preconcurrency import Vision
 import CoreGraphics
 
 // MARK: - Board Detector
@@ -12,7 +12,7 @@ public final class BoardDetector: Sendable {
     // MARK: - Detection Result
     
     /// Result of board detection with corner positions.
-    public struct DetectionResult: Sendable {
+    public struct DetectionResult: @unchecked Sendable {
         /// The four corners in image pixel coordinates.
         /// Order: top-left, top-right, bottom-right, bottom-left.
         public let corners: [CGPoint]
@@ -23,11 +23,21 @@ public final class BoardDetector: Sendable {
         /// The detected rectangle observation from Vision.
         public let observation: VNRectangleObservation
         
+        public init(corners: [CGPoint], confidence: Float, observation: VNRectangleObservation) {
+            self.corners = corners
+            self.confidence = confidence
+            self.observation = observation
+        }
+        
         /// Whether this is a valid board detection.
         public var isValid: Bool {
             confidence >= AppConfig.boardDetectionConfidenceThreshold && corners.count == 4
         }
     }
+    
+    // MARK: - Initialization
+    
+    public init() {}
     
     // MARK: - Detection
     
