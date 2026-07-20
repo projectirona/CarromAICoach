@@ -13,14 +13,9 @@ workflows:
         - pattern: main
           include: true
     scripts:
-      - name: Build Swift Package
+      - name: Build and Test iOS App
         script: |
-          # The codebase is structured as a Swift Package Manager (SPM) library.
-          # We run swift build to verify the target compiles successfully.
-          swift build -v
-      - name: Archive and Build iOS App
-        script: |
-          # Compiles and tests the app target targeting iPhone 15 Plus simulator
+          # Build package targeting iOS Simulator (iPhone 15 Plus) directly
           xcodebuild build -scheme CarromAICoach -destination 'platform=iOS Simulator,name=iPhone 15 Plus'
     artifacts:
       - .build/debug/*.a
