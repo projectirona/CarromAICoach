@@ -199,8 +199,8 @@ public final class ShotEvaluator: @unchecked Sendable {
         guard matchState.queenStatus == .pocketed else { return 0.5 }
         
         // If we pocket a player coin, we cover the queen
-        let playerCoinPocketed = simResult.pocketedBodies.contains {
-            let type = simResult.finalBodies.first(where: { body in body.id == $0.bodyID })?.bodyType
+        let playerCoinPocketed = simResult.pocketedBodies.contains { pocketedBody in
+            let type = simResult.finalBodies.first(where: { body in body.id == pocketedBody.bodyID })?.bodyType
             return type == matchState.playerColor.detectionType
         }
         
