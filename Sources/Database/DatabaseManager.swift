@@ -36,9 +36,9 @@ public final class DatabaseManager: @unchecked Sendable {
     private func openDatabase() {
         let result = sqlite3_open(dbPath, &db)
         if result != SQLITE_OK {
-            Log.database.error("Failed to open database: \(String(cString: sqlite3_errmsg(db)))")
+            Log.database.error("Failed to open database: \(String(cString: sqlite3_errmsg(self.db)))")
         } else {
-            Log.database.info("Database opened at \(dbPath)")
+            Log.database.info("Database opened at \(self.dbPath)")
         }
     }
     
@@ -115,7 +115,7 @@ public final class DatabaseManager: @unchecked Sendable {
         sqlite3_bind_double(stmt, 8, match.updatedAt.timeIntervalSince1970)
         
         if sqlite3_step(stmt) != SQLITE_DONE {
-            Log.database.error("Failed to save match: \(String(cString: sqlite3_errmsg(db)))")
+            Log.database.error("Failed to save match: \(String(cString: sqlite3_errmsg(self.db)))")
         }
     }
     
