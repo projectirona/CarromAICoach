@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrom AI Coach — Simulator</title>
+    <meta name="description" content="AI-powered carrom coaching simulator with physics-based shot analysis and strategic recommendations.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header id="header">
+            <div class="header-left">
+                <div class="logo-icon">◎</div>
+                <h1>Carrom AI Coach</h1>
+                <span class="badge">Simulator</span>
+            </div>
+            <div class="header-right">
+                <div id="match-info" class="hidden">
+                    <span class="player-indicator" id="player-color-indicator"></span>
+                    <span id="player-color-label"></span>
+                    <span class="divider">|</span>
+                    <span id="turn-label">Turn 1</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Color Selection Screen -->
+        <div id="screen-color-select" class="screen active">
+            <div class="color-select-content">
+                <div class="welcome-icon">◎</div>
+                <h2>Select Your Color</h2>
+                <p class="subtitle">Choose which coins you'll be playing with</p>
+                <div class="color-buttons">
+                    <button class="color-btn black-btn" id="btn-black" onclick="selectColor('black')">
+                        <div class="coin-preview black-coin-preview"></div>
+                        <span>Black</span>
+                    </button>
+                    <button class="color-btn white-btn" id="btn-white" onclick="selectColor('white')">
+                        <div class="coin-preview white-coin-preview"></div>
+                        <span>White</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Game Screen -->
+        <div id="screen-game" class="screen">
+            <div class="game-layout">
+                <!-- Board Area -->
+                <div class="board-container">
+                    <canvas id="board-canvas" width="700" height="700"></canvas>
+                    <div id="board-status" class="board-status hidden">
+                        <div class="status-spinner"></div>
+                        <span>Analyzing board...</span>
+                    </div>
+                </div>
+
+                <!-- Control Panel -->
+                <div class="control-panel">
+                    <!-- Recommendation Card -->
+                    <div id="recommendation-card" class="card recommendation-card hidden">
+                        <div class="card-header">
+                            <h3>AI Recommendation</h3>
+                            <div id="analysis-time" class="analysis-time"></div>
+                        </div>
+                        <div class="card-body">
+                            <div class="stats-row">
+                                <div class="stat" id="stat-probability">
+                                    <div class="stat-value">—</div>
+                                    <div class="stat-label">Success</div>
+                                </div>
+                                <div class="stat" id="stat-power">
+                                    <div class="stat-value">—</div>
+                                    <div class="stat-label">Power</div>
+                                </div>
+                                <div class="stat" id="stat-type">
+                                    <div class="stat-value">—</div>
+                                    <div class="stat-label">Shot Type</div>
+                                </div>
+                            </div>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Target</span>
+                                    <span class="info-value" id="info-target">—</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Pocket</span>
+                                    <span class="info-value" id="info-pocket">—</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Pocketable</span>
+                                    <span class="info-value" id="info-pocketable">—</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Aim Angle</span>
+                                    <span class="info-value" id="info-angle">—</span>
+                                </div>
+                            </div>
+                            <div class="reasoning" id="reasoning-text"></div>
+                        </div>
+                    </div>
+
+                    <!-- Alternatives Card -->
+                    <div id="alternatives-card" class="card alternatives-card hidden">
+                        <div class="card-header">
+                            <h3>Alternative Shots</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="alternatives-list" class="alternatives-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Baseline Selection -->
+                    <div id="baseline-select-card" class="card">
+                        <div class="card-header">
+                            <h3>Active Baseline</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="baseline-options">
+                                <label class="radio-label">
+                                    <input type="radio" name="baseline-selection" value="bottom" checked onchange="changeBaseline('bottom')">
+                                    <span>Bottom (Standard)</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="baseline-selection" value="top" onchange="changeBaseline('top')">
+                                    <span>Top (Opposite)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Board State Card -->
+                    <div id="board-state-card" class="card">
+                        <div class="card-header">
+                            <h3>Board State</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="coin-counts">
+                                <div class="coin-count">
+                                    <div class="coin-dot black-dot"></div>
+                                    <span>Black: <strong id="black-count">9</strong></span>
+                                </div>
+                                <div class="coin-count">
+                                    <div class="coin-dot white-dot"></div>
+                                    <span>White: <strong id="white-count">9</strong></span>
+                                </div>
+                                <div class="coin-count">
+                                    <div class="coin-dot queen-dot"></div>
+                                    <span>Queen: <strong id="queen-status">On Board</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="actions">
+                        <button class="btn btn-primary" id="btn-analyze" onclick="analyzeBoard()">
+                            <span class="btn-icon">🎯</span> Analyze Board
+                        </button>
+                        <button class="btn btn-accent" id="btn-play-shot" onclick="playShot()" disabled>
+                            <span class="btn-icon">▶</span> Play Shot
+                        </button>
+                        <div class="btn-row">
+                            <button class="btn btn-secondary" id="btn-randomize" onclick="randomizeBoard()">
+                                <span class="btn-icon">🎲</span> Randomize
+                            </button>
+                            <button class="btn btn-ghost" onclick="newMatch()">
+                                <span class="btn-icon">↺</span> New Match
+                            </button>
+                        </div>
+                        <div class="btn-row">
+                            <button class="btn btn-secondary" onclick="exportBoardState()">
+                                <span class="btn-icon">📤</span> Export State
+                            </button>
+                            <button class="btn btn-secondary" onclick="importBoardState()">
+                                <span class="btn-icon">📥</span> Import State
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Shot History -->
+                    <div id="history-card" class="card history-card">
+                        <div class="card-header">
+                            <h3>Shot History</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="shot-history" class="shot-history">
+                                <div class="empty-history">No shots yet</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Stats -->
+                    <div id="perf-card" class="card perf-card hidden">
+                        <div class="card-header">
+                            <h3>Performance</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="perf-grid">
+                                <div class="perf-item">
+                                    <span class="perf-label">Candidates</span>
+                                    <span class="perf-value" id="perf-candidates">—</span>
+                                </div>
+                                <div class="perf-item">
+                                    <span class="perf-label">Evaluated</span>
+                                    <span class="perf-value" id="perf-evaluated">—</span>
+                                </div>
+                                <div class="perf-item">
+                                    <span class="perf-label">Sim Steps</span>
+                                    <span class="perf-value" id="perf-steps">—</span>
+                                </div>
+                                <div class="perf-item">
+                                    <span class="perf-label">Analysis</span>
+                                    <span class="perf-value" id="perf-time">—</span>
+                                </div>
+                                <div class="perf-item">
+                                    <span class="perf-label">Pocketed</span>
+                                    <span class="perf-value" id="perf-pocketed">—</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="physics.js"></script>
+    <script src="strategy.js"></script>
+    <script src="board.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
