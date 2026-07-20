@@ -96,7 +96,11 @@ public struct CollisionResolver: Sendable {
         for i in 0..<(count - 1) {
             for j in (i + 1)..<count {
                 guard bodies[i].isActive && bodies[j].isActive else { continue }
-                resolve(&bodies[i], &bodies[j])
+                var bodyA = bodies[i]
+                var bodyB = bodies[j]
+                resolve(&bodyA, &bodyB)
+                bodies[i] = bodyA
+                bodies[j] = bodyB
             }
         }
     }
