@@ -15,13 +15,13 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/nicklama/sqlite-swift", from: "0.15.0")
+        .package(url: "https://github.com/stephencelis/SQLite.swift.git", from: "0.15.3")
     ],
     targets: [
         .target(
             name: "CarromAICoach",
             dependencies: [
-                .product(name: "SQLite", package: "sqlite-swift")
+                .product(name: "SQLite", package: "SQLite.swift")
             ],
             path: "Sources",
             resources: [
