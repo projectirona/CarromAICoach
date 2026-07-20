@@ -15,8 +15,8 @@ workflows:
     scripts:
       - name: Build and Test iOS App
         script: |
-          # Build package targeting iOS Simulator (iPhone 15 Plus) directly
-          xcodebuild build -scheme CarromAICoach -destination 'platform=iOS Simulator,name=iPhone 15 Plus'
+          # Build package targeting iOS Simulator (iPhone 17 Pro Max) which is available on host
+          xcodebuild build -scheme CarromAICoach -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max'
     artifacts:
       - .build/debug/*.a
       - .build/release/*.a
