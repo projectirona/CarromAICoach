@@ -13,7 +13,12 @@ import com.example.carromaicoach.theme.CarromAICoachTheme
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-
+    
+    if (org.opencv.android.OpenCVLoader.initDebug()) {
+        android.util.Log.d("CarromAICoach", "OpenCV initialized successfully")
+    } else {
+        android.util.Log.e("CarromAICoach", "OpenCV initialization failed")
+    }
     enableEdgeToEdge()
     setContent {
       CarromAICoachTheme { Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { MainNavigation() } }
