@@ -19,56 +19,60 @@ class ShotGenerator {
         
         // Try all 4 pockets
         for (pocket in board.pockets) {
-            val shot = generateShotForPocket(targetCoin, pocket.id, pocket.positionMM)
-            if (shot != null) shots.add(shot)
+            val aimDx = pocket.positionMM.x - targetCoin.position.x
+            val aimDy = pocket.positionMM.y - targetCoin.position.y
+            val pocketAngle = atan2(aimDy.toDouble(), aimDx.toDouble())
+            
+            // Calculate contact point (striker hits the coin opposite to the pocket)
+            val contactDist = PhysicsConstants.coinRadius + PhysicsConstants.strikerRadius
+            val contactX = targetCoin.position.x - contactDist * cos(pocketAngle)
+            val contactY = targetCoin.position.y - contactDist * sin(pocketAngle)
+            
+            // Find striker baseline position
+            val baselineY = BoardConfig.baselineY
+            
+            // Instead of just calculating the straight-line back (which might be blocked or out of bounds),
+            // a Grandmaster AI scans the entire baseline to find the best cut angles.
+            val numSamples = 20
+            val step = (BoardConfig.baselineMaxX - BoardConfig.baselineMinX) / (numSamples - 1)
+            
+            for (i in 0 until numSamples) {
+                val baselineX = BoardConfig.baselineMinX + i * step
+                
+                val strikerPos = Offset(baselineX.toFloat(), baselineY.toFloat())
+                
+                // Angle from Striker to Contact point
+                val aimDxStr = contactX - baselineX
+                val aimDyStr = contactY - baselineY
+                val aimAngle = atan2(aimDyStr, aimDxStr)
+                
+                // Cut angle is the difference between striker path and coin path
+                val cutAngle = Math.abs(aimAngle - pocketAngle)
+                
+                // If cut angle is too steep (e.g. > 75 degrees), the physics become nearly impossible
+                if (cutAngle > Math.toRadians(75.0)) {
+                    continue
+                }
+                
+                val power = 2500.0 // Base power, Evaluator will adjust
+                
+                shots.add(Shot(
+                    shotType = ShotType.CUT,
+                    strikerPosition = strikerPos,
+                    aimAngle = aimAngle,
+                    power = power,
+                    targetCoin = targetCoin,
+                    targetPocket = pocket.id,
+                    rebounds = 0,
+                    strikerPath = listOf(strikerPos, Offset(contactX.toFloat(), contactY.toFloat())),
+                    coinPath = listOf(targetCoin.position, pocket.positionMM)
+                ))
+            }
         }
         
         return shots
     }
     
-    private fun generateShotForPocket(targetCoin: Coin, pocketId: PocketID, pocketPosition: Offset): Shot? {
-        val aimDx = pocketPosition.x - targetCoin.position.x
-        val aimDy = pocketPosition.y - targetCoin.position.y
-        val aimAngle = atan2(aimDy.toDouble(), aimDx.toDouble())
-        
-        // Calculate contact point (striker hits the coin opposite to the pocket)
-        val contactDist = PhysicsConstants.coinRadius + PhysicsConstants.strikerRadius
-        val contactX = targetCoin.position.x - contactDist * cos(aimAngle)
-        val contactY = targetCoin.position.y - contactDist * sin(aimAngle)
-        
-        // Find striker baseline position
-        val baselineY = BoardConfig.baselineY
-        
-        // Basic projection (assuming straight line from baseline to contact point)
-        val t = (baselineY - contactY) / sin(aimAngle)
-        val baselineX = contactX + t * cos(aimAngle)
-        
-        // If the shot requires the striker to be placed outside the baseline, it's impossible
-        if (baselineX < BoardConfig.baselineMinX || baselineX > BoardConfig.baselineMaxX) {
-            return null
-        }
-        
-        val strikerPosition = Offset(baselineX.toFloat(), baselineY.toFloat())
-        
-        // Re-calculate true aim angle from baseline
-        val trueAimDx = contactX - baselineX
-        val trueAimDy = contactY - baselineY
-        val trueAimAngle = atan2(trueAimDy.toDouble(), trueAimDx.toDouble())
-        
-        val power = 3500.0 // Default power for direct shots
-        
-        return Shot(
-            shotType = ShotType.DIRECT,
-            strikerPosition = strikerPosition,
-            aimAngle = trueAimAngle,
-            power = power,
-            targetCoin = targetCoin,
-            targetPocket = pocketId,
-            rebounds = 0,
-            strikerPath = listOf(strikerPosition, Offset(contactX.toFloat(), contactY.toFloat())),
-            coinPath = listOf(targetCoin.position, pocketPosition)
-        )
-    }
     // Generates a list of possible single-cushion rebound shots
     fun generateReboundShots(board: Board, targetCoin: Coin): List<Shot> {
         val shots = mutableListOf<Shot>()
@@ -155,6 +159,75 @@ class ShotGenerator {
                 }
             }
         }
+        return shots
+    }
+    
+    // Generates a list of possible combination (plant) shots: Striker -> Intermediate Coin -> Target Coin -> Pocket
+    fun generateCombinationShots(board: Board, targetCoin: Coin, allCoins: List<Coin>): List<Shot> {
+        val shots = mutableListOf<Shot>()
+        
+        for (pocket in board.pockets) {
+            val aimDx = pocket.positionMM.x - targetCoin.position.x
+            val aimDy = pocket.positionMM.y - targetCoin.position.y
+            val pocketAngle = atan2(aimDy.toDouble(), aimDx.toDouble())
+            
+            val contactDist = PhysicsConstants.coinRadius * 2 // Coin hitting another coin
+            val contactB_X = targetCoin.position.x - contactDist * cos(pocketAngle)
+            val contactB_Y = targetCoin.position.y - contactDist * sin(pocketAngle)
+            
+            // Try every other coin on the board as the intermediate coin (Coin A)
+            for (intermediateCoin in allCoins) {
+                if (intermediateCoin.id == targetCoin.id) continue
+                
+                val aimDxA = contactB_X - intermediateCoin.position.x
+                val aimDyA = contactB_Y - intermediateCoin.position.y
+                val intermediateAngle = atan2(aimDyA, aimDxA)
+                
+                // Contact point on intermediate coin for the striker
+                val contactDistStriker = PhysicsConstants.coinRadius + PhysicsConstants.strikerRadius
+                val contactA_X = intermediateCoin.position.x - contactDistStriker * cos(intermediateAngle)
+                val contactA_Y = intermediateCoin.position.y - contactDistStriker * sin(intermediateAngle)
+                
+                // Find striker baseline position
+                val baselineY = BoardConfig.baselineY
+                
+                // Basic projection (assuming straight line from baseline to contactA point)
+                val t = (baselineY - contactA_Y) / sin(intermediateAngle)
+                val baselineX = contactA_X + t * cos(intermediateAngle)
+                
+                // If the shot requires the striker to be placed outside the baseline, it's impossible
+                if (baselineX < BoardConfig.baselineMinX || baselineX > BoardConfig.baselineMaxX) {
+                    continue
+                }
+                
+                val strikerPos = Offset(baselineX.toFloat(), baselineY.toFloat())
+                
+                // Re-calculate true aim angle from baseline
+                val trueAimDx = contactA_X - baselineX
+                val trueAimDy = contactA_Y - baselineY
+                val trueAimAngle = atan2(trueAimDy, trueAimDx)
+                
+                val power = 4500.0 // Combinations require high power
+                
+                shots.add(Shot(
+                    shotType = ShotType.CUT, // Using CUT as combination
+                    strikerPosition = strikerPos,
+                    aimAngle = trueAimAngle,
+                    power = power,
+                    targetCoin = targetCoin,
+                    targetPocket = pocket.id,
+                    rebounds = 0,
+                    strikerPath = listOf(strikerPos, Offset(contactA_X.toFloat(), contactA_Y.toFloat())),
+                    coinPath = listOf(
+                        intermediateCoin.position, 
+                        Offset(contactB_X.toFloat(), contactB_Y.toFloat()),
+                        targetCoin.position, 
+                        pocket.positionMM
+                    )
+                ))
+            }
+        }
+        
         return shots
     }
 }

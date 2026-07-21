@@ -68,6 +68,57 @@ class StrategyEngine(
                 }
             }
         }
+        // 4. If the best rebound shot is also terrible, evaluate combinations
+        if (bestProb < 0.6) {
+            for (coin in playerCoins) {
+                val combinationShots = shotGenerator.generateCombinationShots(board, coin, board.coins)
+                for (shot in combinationShots) {
+                    val prob = shotEvaluator.evaluate(shot, board)
+                    if (prob > 0.0) {
+                        allCandidates.add(
+                            PocketableCoin(
+                                coin = coin,
+                                pocket = shot.targetPocket,
+                                shotType = shot.shotType,
+                                probability = prob
+                            )
+                        )
+                        if (prob > bestProb) {
+                            bestProb = prob
+                            bestShot = shot
+                            bestCoin = coin
+                            bestPocket = shot.targetPocket
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 5. Queen Coverage Logic (1-ply Lookahead)
+        // If the best shot is the Queen, we MUST have a cover shot lined up for the next turn.
+        if (bestCoin != null && bestCoin.coinType == com.example.carromaicoach.data.models.DetectionType.QUEEN) {
+            // Find the best direct shot for any of the player's coins, pretending the Queen is gone
+            var bestCoverProb = 0.0
+            val boardWithoutQueen = board.copy(coins = board.coins.filter { it.id != bestCoin.id })
+            
+            for (coin in playerCoins) {
+                if (coin.id == bestCoin.id) continue // Can't cover with the Queen
+                
+                val coverShots = shotGenerator.generateDirectShots(boardWithoutQueen, coin)
+                for (shot in coverShots) {
+                    val prob = shotEvaluator.evaluate(shot, boardWithoutQueen)
+                    if (prob > bestCoverProb) {
+                        bestCoverProb = prob
+                    }
+                }
+            }
+            
+            // If the best cover shot is terrible, we shouldn't shoot the Queen right now!
+            if (bestCoverProb < 0.6) {
+                // Demote the Queen shot so the AI picks a defensive shot or another coin instead
+                bestProb = 0.1 
+            }
+        }
 
         if (bestShot == null || bestCoin == null || bestPocket == null) return null
         
