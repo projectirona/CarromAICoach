@@ -97,7 +97,7 @@ struct LiveAROverlay: View {
                     let coinRadius: CGFloat = 12
                     context.fill(
                         Circle().path(in: CGRect(x: start.x - coinRadius, y: start.y - coinRadius, width: coinRadius * 2, height: coinRadius * 2)),
-                        with: .color(state.recommendation.pocketableCoins.first?.coin.color == .black ? Color(white: 0.15) : .white)
+                        with: .color(state.recommendation.pocketableCoins.first?.coin.coinType == .blackCoin ? Color(white: 0.15) : .white)
                     )
                     context.stroke(
                         Circle().path(in: CGRect(x: start.x - coinRadius, y: start.y - coinRadius, width: coinRadius * 2, height: coinRadius * 2)),
