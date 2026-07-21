@@ -98,8 +98,7 @@ public final class StrategyEngine: @unchecked Sendable {
         )
         
         Log.strategy.info(
-            "Best shot: \(best.candidate.shotType.rawValue) to \(best.candidate.targetPocket.rawValue) " +
-            "score=\(String(format: "%.3f", best.compositeScore)) in \(String(format: "%.3f", analysisTime))s"
+            "Best shot: \(best.candidate.shotType.rawValue) to \(best.candidate.targetPocket.rawValue) score=\(best.compositeScore) in \(analysisTime)s"
         )
         
         return AnalysisResult(

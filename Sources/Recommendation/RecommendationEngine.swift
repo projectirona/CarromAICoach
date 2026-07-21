@@ -121,9 +121,7 @@ public final class RecommendationEngine: @unchecked Sendable {
         )
         
         Log.recommendation.info(
-            "Analysis complete in \(String(format: "%.3f", totalTime))s: " +
-            "\(shot.shotType.displayName) to \(shot.targetPocket.displayName) " +
-            "(\(recommendation.probabilityPercent))"
+            "Analysis complete in \(totalTime)s: \(shot.shotType.displayName) to \(shot.targetPocket.displayName) (\(recommendation.probabilityPercent))"
         )
         
         return recommendation
