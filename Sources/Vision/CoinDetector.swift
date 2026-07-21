@@ -181,7 +181,7 @@ public final class CoinDetector: @unchecked Sendable {
     /// Places coins in a typical mid-game configuration.
     private func generateMockDetections(imageSize: CGSize) -> [Coin] {
         var coins: [Coin] = []
-        let halfArea = BoardConfig.halfPlayingArea
+
         
         // Place some black coins in realistic positions
         let blackPositions: [(Double, Double)] = [

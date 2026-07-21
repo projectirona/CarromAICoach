@@ -73,7 +73,7 @@ public final class PerspectiveCorrector: Sendable {
             return nil
         }
         
-        Log.vision.info("Perspective correction complete: \(Int(outputSize.width))×\(Int(outputSize.height))")
+        Log.vision.info("Perspective correction complete: \(Int(self.outputSize.width))×\(Int(self.outputSize.height))")
         
         return UIImage(cgImage: outputCGImage)
     }
