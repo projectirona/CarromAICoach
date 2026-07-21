@@ -18,12 +18,6 @@ public final class CameraManager: NSObject, ObservableObject {
     /// The most recently captured frame as UIImage.
     @Published public var currentFrame: UIImage?
     
-    /// Whether a stable, sharp board image has been auto-captured.
-    @Published public var hasCaptured = false
-    
-    /// The auto-captured high-quality frame.
-    @Published public var capturedFrame: UIImage?
-    
     /// Status message for the user.
     @Published public var statusMessage = "Point camera at the board"
     
@@ -37,11 +31,10 @@ public final class CameraManager: NSObject, ObservableObject {
     private let sessionQueue = DispatchQueue(label: "com.carrom.camera.session")
     private let processingQueue = DispatchQueue(label: "com.carrom.camera.processing")
     
-    // MARK: - Stability Detection
+    // MARK: - Frame Processing
     
-    private var stableFrameCounter = 0
-    private var previousFrameCenterIntensity: Double = 0
     private let frameAnalyzer = FrameAnalyzer()
+    private var lastAnalysisTime: Date = .distantPast
     
     // MARK: - Callback
     
@@ -82,10 +75,8 @@ public final class CameraManager: NSObject, ObservableObject {
     
     /// Reset capture state for a new scan.
     public func resetCapture() {
-        hasCaptured = false
-        capturedFrame = nil
-        stableFrameCounter = 0
         statusMessage = "Point camera at the board"
+        lastAnalysisTime = .distantPast
     }
     
     // MARK: - Session Configuration
@@ -151,7 +142,7 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         let image = UIImage(cgImage: cgImage)
         
         Task { @MainActor [weak self] in
-            guard let self = self, !self.hasCaptured else { return }
+            guard let self = self else { return }
             
             self.currentFrame = image
             self.processFrame(image)
@@ -163,43 +154,28 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
 
 extension CameraManager {
     
-    /// Process a frame for quality and stability.
+    /// Process a frame and optionally trigger AR analysis if throttled properly.
     private func processFrame(_ image: UIImage) {
+        let now = Date()
+        
+        // Throttle analysis to ~5 FPS to prevent CoreML/Physics from overloading the CPU
+        guard now.timeIntervalSince(lastAnalysisTime) > 0.2 else {
+            return
+        }
+        
         // 1. Check blur
         let blurScore = frameAnalyzer.blurScore(image)
         guard blurScore >= AppConfig.blurThreshold else {
             statusMessage = "Hold steady — image is blurry"
-            stableFrameCounter = 0
+            isBoardDetected = false
             return
         }
         
-        // 2. Check stability (frame-to-frame difference)
-        let currentIntensity = frameAnalyzer.centerIntensity(image)
-        let displacement = abs(currentIntensity - previousFrameCenterIntensity)
-        previousFrameCenterIntensity = currentIntensity
+        // 2. Trigger analysis
+        lastAnalysisTime = now
+        statusMessage = "Tracking board..."
+        isBoardDetected = true
         
-        if displacement < AppConfig.stabilityDisplacementThreshold {
-            stableFrameCounter += 1
-        } else {
-            stableFrameCounter = 0
-        }
-        
-        // 3. Update status
-        if stableFrameCounter < AppConfig.stableFrameCount {
-            statusMessage = "Hold steady... (\(stableFrameCounter)/\(AppConfig.stableFrameCount))"
-            isBoardDetected = true
-        }
-        
-        // 4. Auto-capture when stable
-        if stableFrameCounter >= AppConfig.stableFrameCount {
-            capturedFrame = image
-            hasCaptured = true
-            statusMessage = "Board captured! Analyzing..."
-            stableFrameCounter = 0
-            
-            Log.camera.info("Auto-captured stable frame (blur=\(blurScore, format: .fixed(precision: 1)))")
-            
-            onFrameCaptured?(image)
-        }
+        onFrameCaptured?(image)
     }
 }

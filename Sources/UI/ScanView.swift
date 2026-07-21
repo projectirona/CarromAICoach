@@ -22,15 +22,24 @@ struct ScanView: View {
                 
                 // Status indicator
                 statusIndicator
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 20)
+                
+                // Next turn button
+                if appState.liveARState != nil {
+                    actionButtons
+                } else {
+                    Spacer().frame(height: 60)
+                }
             }
             
-            // Board frame guide
-            boardGuide
+            // Board frame guide (only if no AR state)
+            if appState.liveARState == nil {
+                boardGuide
+            }
             
-            // Loading overlay when analyzing
-            if appState.isAnalyzing {
-                analyzingOverlay
+            // Live AR Overlay
+            if let arState = appState.liveARState {
+                LiveAROverlay(state: arState)
             }
         }
     }
@@ -102,9 +111,11 @@ struct ScanView: View {
     
     private var statusIndicator: some View {
         HStack(spacing: 10) {
-            if appState.cameraManager.hasCaptured {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+            if appState.cameraManager.isBoardDetected {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .tint(.green)
+                    .scaleEffect(0.8)
             } else {
                 ProgressView()
                     .progressViewStyle(.circular)
@@ -124,32 +135,24 @@ struct ScanView: View {
         )
     }
     
-    // MARK: - Analyzing Overlay
+    // MARK: - Actions
     
-    private var analyzingOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.6)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 20) {
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .tint(.orange)
-                    .scaleEffect(1.5)
-                
-                Text("Analyzing board...")
+    private var actionButtons: some View {
+        Button(action: {
+            appState.advanceTurn()
+        }) {
+            HStack {
+                Text("Next Turn")
                     .font(.headline)
-                    .foregroundColor(.white)
-                
-                Text("Finding the best shot")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
+                Image(systemName: "arrow.right.circle.fill")
             }
-            .padding(40)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(.ultraThinMaterial)
-            )
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Color.green)
+            .foregroundColor(.white)
+            .cornerRadius(12)
         }
+        .padding(.horizontal, 40)
+        .padding(.bottom, 20)
     }
 }

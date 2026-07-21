@@ -20,10 +20,6 @@ struct ContentView: View {
             case .scanning:
                 ScanView()
                     .transition(.move(edge: .trailing))
-                
-            case .result:
-                ResultView()
-                    .transition(.move(edge: .trailing))
             }
         }
         .animation(.easeInOut(duration: 0.3), value: appState.currentScreen)

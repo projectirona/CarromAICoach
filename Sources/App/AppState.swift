@@ -16,7 +16,6 @@ public final class AppState {
     public enum Screen {
         case colorSelection
         case scanning
-        case result
     }
     
     public var currentScreen: Screen = .colorSelection
@@ -36,17 +35,11 @@ public final class AppState {
     
     // MARK: - Analysis State
     
-    /// Whether the analysis pipeline is running.
-    public var isAnalyzing = false
-    
-    /// The current recommendation (nil if not yet analyzed).
-    public var currentRecommendation: Recommendation?
+    /// The current live AR state (corners + recommendation).
+    public var liveARState: ARState?
     
     /// Error message if analysis fails.
     public var errorMessage: String?
-    
-    /// The captured board image for overlay display.
-    public var capturedImage: UIImage?
     
     // MARK: - Dependencies
     
@@ -70,7 +63,6 @@ public final class AppState {
     private func setupCameraCallback() {
         cameraManager.onFrameCaptured = { [weak self] image in
             Task { @MainActor in
-                self?.capturedImage = image
                 await self?.runAnalysis(on: image)
             }
         }
@@ -88,31 +80,22 @@ public final class AppState {
         Log.app.info("Color selected: \(color.rawValue)")
     }
     
-    /// Start a new scan (after viewing recommendation).
-    public func scanAgain() {
-        currentRecommendation = nil
-        errorMessage = nil
-        capturedImage = nil
-        currentScreen = .scanning
-        cameraManager.resetCapture()
-        cameraManager.startSession()
-        
-        // Advance turn
+    /// Advance to the next turn while in AR mode.
+    public func advanceTurn() {
         matchState?.advanceTurn()
         if let match = matchState {
             matchStore.save(match)
         }
-        
-        Log.app.info("Scanning again for turn \(self.matchState?.currentTurn ?? 0)")
+        liveARState = nil
+        Log.app.info("Advanced to turn \(self.matchState?.currentTurn ?? 0)")
     }
     
     /// Start a completely new match.
     public func newMatch() {
         matchState = nil
         playerColor = nil
-        currentRecommendation = nil
+        liveARState = nil
         errorMessage = nil
-        capturedImage = nil
         currentScreen = .colorSelection
         cameraManager.stopSession()
         cameraManager.resetCapture()
@@ -129,30 +112,22 @@ public final class AppState {
             return
         }
         
-        isAnalyzing = true
         errorMessage = nil
-        cameraManager.stopSession()
         
-        Log.app.info("Running analysis pipeline...")
-        
-        let recommendation = await recommendationEngine.analyze(
+        let arState = await recommendationEngine.analyze(
             image: image,
             matchState: matchState
         )
         
-        isAnalyzing = false
-        
-        if let recommendation = recommendation {
-            currentRecommendation = recommendation
-            self.matchState?.recordRecommendation(recommendation)
+        if let arState = arState {
+            self.liveARState = arState
+            self.matchState?.recordRecommendation(arState.recommendation)
             if let match = self.matchState {
                 matchStore.save(match)
             }
-            currentScreen = .result
         } else {
-            errorMessage = "Could not analyze the board. Please try again."
-            cameraManager.resetCapture()
-            cameraManager.startSession()
+            // Keep the previous arState if we briefly lose tracking,
+            // or we could fade it out after a timeout.
         }
     }
 }

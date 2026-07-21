@@ -42,7 +42,7 @@ public final class RecommendationEngine: @unchecked Sendable {
     public func analyze(
         image: UIImage,
         matchState: MatchState
-    ) async -> Recommendation? {
+    ) async -> ARState? {
         let startTime = Date()
         
         Log.recommendation.info("Starting analysis pipeline")
@@ -124,6 +124,6 @@ public final class RecommendationEngine: @unchecked Sendable {
             "Analysis complete in \(totalTime)s: \(shot.shotType.displayName) to \(shot.targetPocket.displayName) (\(recommendation.probabilityPercent))"
         )
         
-        return recommendation
+        return ARState(recommendation: recommendation, boardObservation: boardResult.observation)
     }
 }
