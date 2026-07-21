@@ -16,7 +16,7 @@ data class Shot(
     val shotType: ShotType,
     val strikerPosition: Offset,
     val aimAngle: Double,
-    val power: Double,
+    var power: Double,
     val targetCoin: Coin,
     val targetPocket: PocketID,
     val rebounds: Int,

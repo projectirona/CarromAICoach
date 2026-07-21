@@ -42,6 +42,32 @@ class StrategyEngine(
                 }
             }
         }
+        
+        // 3. If the best direct shot is terrible (prob < 0.7), evaluate rebounds
+        if (bestProb < 0.7) {
+            for (coin in playerCoins) {
+                val reboundShots = shotGenerator.generateReboundShots(board, coin)
+                for (shot in reboundShots) {
+                    val prob = shotEvaluator.evaluate(shot, board)
+                    if (prob > 0.0) {
+                        allCandidates.add(
+                            PocketableCoin(
+                                coin = coin,
+                                pocket = shot.targetPocket,
+                                shotType = shot.shotType,
+                                probability = prob
+                            )
+                        )
+                        if (prob > bestProb) {
+                            bestProb = prob
+                            bestShot = shot
+                            bestCoin = coin
+                            bestPocket = shot.targetPocket
+                        }
+                    }
+                }
+            }
+        }
 
         if (bestShot == null || bestCoin == null || bestPocket == null) return null
         

@@ -98,6 +98,29 @@ fun AROverlayCanvas(
                         style = Stroke(width = 4f)
                     )
                 }
+                
+                // Draw Power Indicator
+                val powerLevel = recommendation.shot.displayPower // 1 to 10
+                val strikerStartPos = recommendation.shot.strikerPath.firstOrNull()
+                if (strikerStartPos != null) {
+                    val camPos = perspectiveCorrector.mmToCamera(strikerStartPos, BoardConfig.halfPlayingArea)
+                    val powerColor = when {
+                        powerLevel < 4 -> Color.Green
+                        powerLevel < 7 -> Color.Yellow
+                        else -> Color.Red
+                    }
+                    
+                    // Draw a bar representing power next to the striker
+                    val barHeight = powerLevel * 10f
+                    val barWidth = 15f
+                    val offsetX = 40f
+                    
+                    drawRect(
+                        color = powerColor,
+                        topLeft = Offset(camPos.x + offsetX, camPos.y - barHeight),
+                        size = androidx.compose.ui.geometry.Size(barWidth, barHeight)
+                    )
+                }
             }
             }
         }

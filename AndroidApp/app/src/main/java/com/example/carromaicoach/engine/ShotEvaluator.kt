@@ -9,32 +9,45 @@ class ShotEvaluator(private val physicsEngine: PhysicsEngine = PhysicsEngine()) 
     
     // Evaluates a shot to determine if it is blocked by other coins and its probability of success
     fun evaluate(shot: Shot, board: Board): Double {
-        // 1. Raycast the striker path
-        val strikerRayBlocked = isPathBlocked(
-            shot.strikerPath.first(), 
-            shot.strikerPath.last(), 
-            board.coins, 
-            ignoreCoinId = shot.targetCoin.id
-        )
-        if (strikerRayBlocked) return 0.0 // 0% probability if blocked
+        var totalDistance = 0.0
         
-        // 2. Raycast the target coin path to the pocket
-        val coinRayBlocked = isPathBlocked(
-            shot.coinPath.first(),
-            shot.coinPath.last(),
-            board.coins,
-            ignoreCoinId = shot.targetCoin.id
-        )
-        if (coinRayBlocked) return 0.0
+        // 1. Raycast the striker path segments
+        for (i in 0 until shot.strikerPath.size - 1) {
+            val start = shot.strikerPath[i]
+            val end = shot.strikerPath[i + 1]
+            if (isPathBlocked(start, end, board.coins, ignoreCoinId = shot.targetCoin.id)) {
+                return 0.0 // Blocked
+            }
+            val dx = end.x - start.x
+            val dy = end.y - start.y
+            totalDistance += Math.sqrt((dx * dx + dy * dy).toDouble())
+        }
         
-        // 3. Distance penalty (longer shots are harder)
-        val dx = shot.coinPath.last().x - shot.coinPath.first().x
-        val dy = shot.coinPath.last().y - shot.coinPath.first().y
-        val dist = Math.sqrt((dx * dx + dy * dy).toDouble())
+        // 2. Raycast the target coin path segments
+        for (i in 0 until shot.coinPath.size - 1) {
+            val start = shot.coinPath[i]
+            val end = shot.coinPath[i + 1]
+            if (isPathBlocked(start, end, board.coins, ignoreCoinId = shot.targetCoin.id)) {
+                return 0.0
+            }
+            val dx = end.x - start.x
+            val dy = end.y - start.y
+            totalDistance += Math.sqrt((dx * dx + dy * dy).toDouble())
+        }
         
-        // A simple heuristic: success probability degrades over distance
+        // 3. Update the shot's power based on total distance
+        // Base power of 1000 + 3.0 per mm
+        shot.power = 1000.0 + (totalDistance * 3.0)
+        
+        // 4. Probability calculation
+        // A simple heuristic: success probability degrades over distance and rebounds
         // e.g. 1.0 at 0mm, 0.5 at 1000mm
-        var prob = 1.0 - (dist / 2000.0)
+        var prob = 1.0 - (totalDistance / 2000.0)
+        
+        if (shot.shotType == com.example.carromaicoach.data.models.ShotType.REBOUND) {
+            prob *= 0.8 // Rebounds are inherently 20% harder
+        }
+        
         prob = prob.coerceIn(0.1, 0.95)
         
         return prob
