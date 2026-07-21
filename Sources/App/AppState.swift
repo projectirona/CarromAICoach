@@ -103,7 +103,7 @@ public final class AppState {
             matchStore.save(match)
         }
         
-        Log.app.info("Scanning again for turn \(matchState?.currentTurn ?? 0)")
+        Log.app.info("Scanning again for turn \(self.matchState?.currentTurn ?? 0)")
     }
     
     /// Start a completely new match.
