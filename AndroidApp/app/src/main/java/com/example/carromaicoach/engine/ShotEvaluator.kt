@@ -11,11 +11,14 @@ class ShotEvaluator(private val physicsEngine: PhysicsEngine = PhysicsEngine()) 
     fun evaluate(shot: Shot, board: Board): Double {
         var totalDistance = 0.0
         
+        val ignoredIds = mutableListOf(shot.targetCoin.id)
+        ignoredIds.addAll(shot.intermediateCoinIds)
+        
         // 1. Raycast the striker path segments
         for (i in 0 until shot.strikerPath.size - 1) {
             val start = shot.strikerPath[i]
             val end = shot.strikerPath[i + 1]
-            if (isPathBlocked(start, end, board.coins, ignoreCoinId = shot.targetCoin.id)) {
+            if (isPathBlocked(start, end, board.coins, ignoredIds)) {
                 return 0.0 // Blocked
             }
             val dx = end.x - start.x
@@ -27,7 +30,7 @@ class ShotEvaluator(private val physicsEngine: PhysicsEngine = PhysicsEngine()) 
         for (i in 0 until shot.coinPath.size - 1) {
             val start = shot.coinPath[i]
             val end = shot.coinPath[i + 1]
-            if (isPathBlocked(start, end, board.coins, ignoreCoinId = shot.targetCoin.id)) {
+            if (isPathBlocked(start, end, board.coins, ignoredIds)) {
                 return 0.0
             }
             val dx = end.x - start.x
@@ -48,12 +51,20 @@ class ShotEvaluator(private val physicsEngine: PhysicsEngine = PhysicsEngine()) 
             prob *= 0.8 // Rebounds are inherently 20% harder
         }
         
+        // 5. Penalize difficult cut angles
+        // A cut angle of 0 is straight in. Max realistic is ~75 degrees.
+        val cutAngleDegrees = Math.toDegrees(shot.cutAngle)
+        if (cutAngleDegrees > 10.0) {
+            val penalty = (cutAngleDegrees - 10.0) / 100.0
+            prob -= penalty
+        }
+        
         prob = prob.coerceIn(0.1, 0.95)
         
         return prob
     }
     
-    private fun isPathBlocked(start: Offset, end: Offset, coins: List<Coin>, ignoreCoinId: String): Boolean {
+    private fun isPathBlocked(start: Offset, end: Offset, coins: List<Coin>, ignoreCoinIds: List<String>): Boolean {
         // Line equation: A*x + B*y + C = 0
         val a = end.y - start.y
         val b = start.x - end.x
@@ -71,7 +82,7 @@ class ShotEvaluator(private val physicsEngine: PhysicsEngine = PhysicsEngine()) 
         val maxY = Math.max(start.y, end.y) + PhysicsConstants.coinRadius * 2
         
         for (coin in coins) {
-            if (coin.id == ignoreCoinId) continue
+            if (ignoreCoinIds.contains(coin.id)) continue
             
             // Check bounding box first
             if (coin.position.x < minX || coin.position.x > maxX || 

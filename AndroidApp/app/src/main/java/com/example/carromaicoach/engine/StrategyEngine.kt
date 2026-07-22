@@ -94,6 +94,8 @@ class StrategyEngine(
             }
         }
         
+        var reasoningText = "Best probability shot evaluated using raycasting."
+        
         // 5. Queen Coverage Logic (1-ply Lookahead)
         // If the best shot is the Queen, we MUST have a cover shot lined up for the next turn.
         if (bestCoin != null && bestCoin.coinType == com.example.carromaicoach.data.models.DetectionType.QUEEN) {
@@ -113,10 +115,13 @@ class StrategyEngine(
                 }
             }
             
-            // If the best cover shot is terrible, we shouldn't shoot the Queen right now!
-            if (bestCoverProb < 0.6) {
+            // If the best cover shot is less than 70%, we shouldn't shoot the Queen right now!
+            if (bestCoverProb < 0.7) {
                 // Demote the Queen shot so the AI picks a defensive shot or another coin instead
-                bestProb = 0.1 
+                bestProb = 0.1
+                reasoningText = "Queen shot available, but demoted because there is no reliable cover shot (>70%)."
+            } else {
+                reasoningText = "Queen shot recommended. A strong cover shot is available for the next turn."
             }
         }
 
@@ -126,7 +131,7 @@ class StrategyEngine(
             shot = bestShot,
             probability = bestProb,
             pocketableCoins = allCandidates,
-            reasoning = "Best probability shot evaluated using raycasting.",
+            reasoning = reasoningText,
             boardSnapshot = board,
             analysisTime = 0.05
         )

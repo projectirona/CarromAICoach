@@ -21,7 +21,9 @@ data class Shot(
     val targetPocket: PocketID,
     val rebounds: Int,
     val strikerPath: List<Offset>,
-    val coinPath: List<Offset>
+    val coinPath: List<Offset>,
+    val intermediateCoinIds: List<String> = emptyList(),
+    val cutAngle: Double = 0.0
 ) {
     val displayPower: Int
         get() {

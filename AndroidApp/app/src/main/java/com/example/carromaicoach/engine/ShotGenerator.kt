@@ -31,9 +31,8 @@ class ShotGenerator {
             // Find striker baseline position
             val baselineY = BoardConfig.baselineY
             
-            // Instead of just calculating the straight-line back (which might be blocked or out of bounds),
             // a Grandmaster AI scans the entire baseline to find the best cut angles.
-            val numSamples = 20
+            val numSamples = 100
             val step = (BoardConfig.baselineMaxX - BoardConfig.baselineMinX) / (numSamples - 1)
             
             for (i in 0 until numSamples) {
@@ -65,7 +64,8 @@ class ShotGenerator {
                     targetPocket = pocket.id,
                     rebounds = 0,
                     strikerPath = listOf(strikerPos, Offset(contactX.toFloat(), contactY.toFloat())),
-                    coinPath = listOf(targetCoin.position, pocket.positionMM)
+                    coinPath = listOf(targetCoin.position, pocket.positionMM),
+                    cutAngle = cutAngle
                 ))
             }
         }
@@ -223,7 +223,8 @@ class ShotGenerator {
                         Offset(contactB_X.toFloat(), contactB_Y.toFloat()),
                         targetCoin.position, 
                         pocket.positionMM
-                    )
+                    ),
+                    intermediateCoinIds = listOf(intermediateCoin.id)
                 ))
             }
         }
