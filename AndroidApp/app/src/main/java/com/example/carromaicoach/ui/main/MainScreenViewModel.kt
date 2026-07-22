@@ -21,7 +21,8 @@ data class MainScreenUiState(
     val isAnalyzing: Boolean = false,
     val playerColor: PlayerColor = PlayerColor.WHITE,
     val scaleX: Float = 1f,
-    val scaleY: Float = 1f
+    val scaleY: Float = 1f,
+    val errorMessage: String? = null
 )
 
 class MainScreenViewModel : ViewModel() {
@@ -60,11 +61,16 @@ class MainScreenViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 // 1. OpenCV vision detection
-                var board = coinDetector.detectFromImage(imageProxy)
+                val board = coinDetector.detectFromImage(imageProxy)
                 
-                // Fallback to mock if OpenCV fails to find the board (e.g. testing in emulator)
                 if (board == null) {
-                    board = coinDetector.mockDetect()
+                    _uiState.update { 
+                        it.copy(
+                            isAnalyzing = false,
+                            errorMessage = "Failed to detect the Carrom Board. Please ensure all 4 borders are visible and well-lit."
+                        )
+                    }
+                    return@launch
                 }
                 
                 // Update perspective corrector with board corners
@@ -79,7 +85,8 @@ class MainScreenViewModel : ViewModel() {
                         recommendation = recommendation,
                         isAnalyzing = false,
                         scaleX = scaleX,
-                        scaleY = scaleY
+                        scaleY = scaleY,
+                        errorMessage = null // Clear any previous errors
                     ) 
                 }
             } catch (e: Exception) {

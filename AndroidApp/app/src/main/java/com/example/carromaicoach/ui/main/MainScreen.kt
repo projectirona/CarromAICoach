@@ -83,7 +83,13 @@ fun MainScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (state.isAnalyzing) {
+            if (state.errorMessage != null) {
+                Text(
+                    text = state.errorMessage!!,
+                    color = androidx.compose.ui.graphics.Color.Red,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            } else if (state.isAnalyzing) {
                 Text(text = "Analyzing Board...", color = androidx.compose.ui.graphics.Color.White)
             } else if (state.recommendation != null) {
                 Text(
