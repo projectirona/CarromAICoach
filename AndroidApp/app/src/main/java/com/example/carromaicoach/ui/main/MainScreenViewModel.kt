@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+
 data class MainScreenUiState(
     val board: Board? = null,
     val recommendation: Recommendation? = null,
@@ -25,13 +28,13 @@ data class MainScreenUiState(
     val errorMessage: String? = null
 )
 
-class MainScreenViewModel : ViewModel() {
+class MainScreenViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(MainScreenUiState())
     val uiState: StateFlow<MainScreenUiState> = _uiState.asStateFlow()
 
     val perspectiveCorrector = PerspectiveCorrector()
-    private val coinDetector = CoinDetector()
+    private val coinDetector = com.example.carromaicoach.vision.TFLiteCoinDetector(application)
     private val strategyEngine = StrategyEngine()
     
     private var scanRequested = false

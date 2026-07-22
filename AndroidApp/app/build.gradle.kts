@@ -69,6 +69,10 @@ dependencies {
   
   // OpenCV
   implementation("com.quickbirdstudios:opencv:4.5.3.0")
+  
+  // ML Kit Custom Models (Wraps TFLite without the AGP 8 namespace collision)
+  implementation("com.google.mlkit:object-detection-custom:17.0.2")
+  
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.compose.material3)
   // Tooling
