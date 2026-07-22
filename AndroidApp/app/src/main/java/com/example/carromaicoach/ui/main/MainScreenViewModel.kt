@@ -22,6 +22,7 @@ data class MainScreenUiState(
     val board: Board? = null,
     val recommendation: Recommendation? = null,
     val isAnalyzing: Boolean = false,
+    val isPredictorMode: Boolean = false,
     val playerColor: PlayerColor = PlayerColor.WHITE,
     val scaleX: Float = 1f,
     val scaleY: Float = 1f,
@@ -43,14 +44,28 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         scanRequested = true
         _uiState.update { it.copy(isAnalyzing = true) }
     }
+    
+    fun togglePredictorMode() {
+        _uiState.update { it.copy(isPredictorMode = !it.isPredictorMode) }
+    }
 
     fun onFrame(imageProxy: ImageProxy, viewWidth: Int, viewHeight: Int) {
-        if (!scanRequested) {
+        val currentState = _uiState.value
+        
+        // Only process if scan was explicitly requested OR if we are in Predictor mode
+        if (!scanRequested && !currentState.isPredictorMode) {
+            imageProxy.close()
+            return
+        }
+        
+        // Throttle lock: If we are already analyzing a frame, drop this new frame
+        if (currentState.isAnalyzing) {
             imageProxy.close()
             return
         }
         
         scanRequested = false
+        _uiState.update { it.copy(isAnalyzing = true) }
         
         // Calculate scale factor: Canvas (screen) size / OpenCV Image size.
         // If imageProxy is 640x480, and phone is portrait, the rotated image is 480x640.
@@ -80,7 +95,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                 perspectiveCorrector.updateTransform(board.corners)
                 
                 // 2. Strategy Analysis
-                val recommendation = strategyEngine.analyze(board, _uiState.value.playerColor)
+                val recommendation = strategyEngine.analyze(board, currentState.playerColor, currentState.isPredictorMode)
                 
                 _uiState.update { 
                     it.copy(

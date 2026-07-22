@@ -6,9 +6,11 @@ class StrategyEngine(
     private val shotGenerator: ShotGenerator = ShotGenerator(),
     private val shotEvaluator: ShotEvaluator = ShotEvaluator()
 ) {
-    fun analyze(board: Board, playerColor: PlayerColor): Recommendation? {
+    fun analyze(board: Board, playerColor: PlayerColor, isPredictorMode: Boolean = false): Recommendation? {
         val playerCoins = board.playerCoins(playerColor)
         if (playerCoins.isEmpty()) return null
+        
+        val physicalStriker = board.coins.find { it.coinType == com.example.carromaicoach.data.models.DetectionType.STRIKER }
 
         val allCandidates = mutableListOf<PocketableCoin>()
         var bestShot: Shot? = null
@@ -16,9 +18,36 @@ class StrategyEngine(
         var bestCoin: Coin? = null
         var bestPocket: PocketID? = null
 
+        // If we are in Predictor mode and have a physical striker, we ONLY evaluate shots from that exact point.
+        // We do this by temporarily overriding the ShotGenerator's baseline scanning.
+        
         // 1. Generate all possible direct shots for all of the player's coins
         for (coin in playerCoins) {
-            val shots = shotGenerator.generateDirectShots(board, coin)
+            val shots = if (isPredictorMode && physicalStriker != null) {
+                // Generate a single shot from the physical striker's position
+                val dx = coin.position.x - physicalStriker.position.x
+                val dy = coin.position.y - physicalStriker.position.y
+                val aimAngle = kotlin.math.atan2(dy.toDouble(), dx.toDouble())
+                
+                // For simplicity, we just evaluate the direct paths to pockets
+                val directShots = mutableListOf<Shot>()
+                for (pocket in board.pockets) {
+                    directShots.add(Shot(
+                        shotType = com.example.carromaicoach.data.models.ShotType.DIRECT,
+                        strikerPosition = physicalStriker.position,
+                        aimAngle = aimAngle,
+                        power = 2500.0,
+                        targetCoin = coin,
+                        targetPocket = pocket.id,
+                        rebounds = 0,
+                        strikerPath = listOf(physicalStriker.position, coin.position),
+                        coinPath = listOf(coin.position, pocket.positionMM)
+                    ))
+                }
+                directShots
+            } else {
+                shotGenerator.generateDirectShots(board, coin)
+            }
             
             for (shot in shots) {
                 // 2. Evaluate the shot using raycasting
@@ -44,7 +73,7 @@ class StrategyEngine(
         }
         
         // 3. If the best direct shot is terrible (prob < 0.7), evaluate rebounds
-        if (bestProb < 0.7) {
+        if (!isPredictorMode && bestProb < 0.7) {
             for (coin in playerCoins) {
                 val reboundShots = shotGenerator.generateReboundShots(board, coin)
                 for (shot in reboundShots) {
@@ -69,7 +98,7 @@ class StrategyEngine(
             }
         }
         // 4. If the best rebound shot is also terrible, evaluate combinations
-        if (bestProb < 0.6) {
+        if (!isPredictorMode && bestProb < 0.6) {
             for (coin in playerCoins) {
                 val combinationShots = shotGenerator.generateCombinationShots(board, coin, board.coins)
                 for (shot in combinationShots) {

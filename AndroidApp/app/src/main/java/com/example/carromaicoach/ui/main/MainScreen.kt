@@ -103,8 +103,16 @@ fun MainScreen(
                     Text("Playing as: ${state.playerColor.name}")
                 }
                 
-                Button(onClick = { viewModel.requestScan() }) {
-                    Text("Scan & Analyze")
+                Button(onClick = { viewModel.togglePredictorMode() }) {
+                    Text(if (state.isPredictorMode) "Mode: Predictor" else "Mode: Coach")
+                }
+            }
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                if (!state.isPredictorMode) {
+                    Button(onClick = { viewModel.requestScan() }) {
+                        Text("Scan & Analyze")
+                    }
                 }
             }
         }
