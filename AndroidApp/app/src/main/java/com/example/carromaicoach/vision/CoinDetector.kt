@@ -107,9 +107,13 @@ class CoinDetector {
                 val y = circle[1].toFloat()
                 val radius = circle[2].toFloat()
                 
-                // Extremely simple color classification by looking at the center pixel
-                val centerPixel = mat.get(y.toInt(), x.toInt())
-                val type = classifyCoinColor(centerPixel)
+                // Create a mask for the circle to get the average color
+                val mask = Mat.zeros(mat.size(), CvType.CV_8UC1)
+                Imgproc.circle(mask, Point(x.toDouble(), y.toDouble()), radius.toInt(), Scalar(255.0), -1)
+                val meanColor = Core.mean(mat, mask)
+                mask.release()
+                
+                val type = classifyCoinColor(meanColor.`val`)
                 
                 val coin = when(type) {
                     DetectionType.BLACK_COIN -> Coin.black(i, Offset(x, y))
@@ -132,11 +136,22 @@ class CoinDetector {
         val g = pixel[1]
         val b = pixel[2]
         
-        // Very basic heuristics
-        if (r > 150 && g < 100 && b < 100) return DetectionType.QUEEN
-        if (r > 200 && g > 200 && b > 200) return DetectionType.WHITE_COIN
-        if (r < 80 && g < 80 && b < 80) return DetectionType.BLACK_COIN
+        // Wood coins with black/red rings. 
+        // We use average color over the whole coin, so black rings lower the overall brightness.
         
+        // Queen: High Red, lower Green/Blue
+        if (r > 130 && r > g + 30 && r > b + 30) return DetectionType.QUEEN
+        
+        // Average brightness (R+G+B)
+        val brightness = r + g + b
+        
+        // White coins are generally lighter (less black paint)
+        if (brightness > 450) return DetectionType.WHITE_COIN
+        
+        // Black coins are generally darker (due to black painted rings/rims)
+        if (brightness < 400) return DetectionType.BLACK_COIN
+        
+        // Fallback
         return DetectionType.STRIKER
     }
 
